@@ -27,6 +27,8 @@ import com.example.android.mygarden.ui.MainActivity;
 
 public class PlantWidgetProvider extends AppWidgetProvider {
 
+
+
     static void updateAppWidget(Context context, AppWidgetManager appWidgetManager,
                                 int appWidgetId) {
 
@@ -37,7 +39,12 @@ public class PlantWidgetProvider extends AppWidgetProvider {
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.plant_widget);
         // Widgets allow click handlers to only launch pending intents
         views.setOnClickPendingIntent(R.id.widget_plant_image, pendingIntent);
-        // TODO (4): Create a PendingIntent for the PlantWateringService and setOnClickPendingIntent for widget_water_button
+        // completed (4): Create a PendingIntent for the PlantWateringService and setOnClickPendingIntent for widget_water_button
+        Intent serviceIntent = new Intent(context , PlantWateringService.class);
+        serviceIntent.setAction(PlantWateringService.ACTION_WATER_PLANTS);
+        PendingIntent wateringPendingIntent = PendingIntent.getActivity(context , 0 , serviceIntent , PendingIntent.FLAG_UPDATE_CURRENT);
+        views.setOnClickPendingIntent(R.id.widget_water_button,wateringPendingIntent);
+
         // Instruct the widget manager to update the widget
         appWidgetManager.updateAppWidget(appWidgetId, views);
     }
