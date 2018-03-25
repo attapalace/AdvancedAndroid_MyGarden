@@ -17,11 +17,13 @@ package com.example.android.mygarden;
 */
 
 import android.app.IntentService;
+import android.appwidget.AppWidgetManager;
+import android.content.ComponentName;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
 import android.net.Uri;
-import android.provider.Settings;
 
 import com.example.android.mygarden.provider.PlantContract;
 import com.example.android.mygarden.utils.PlantUtils;
@@ -36,7 +38,9 @@ import static com.example.android.mygarden.provider.PlantContract.PATH_PLANTS;
 public class PlantWateringService extends IntentService {
 
     public static final String ACTION_WATER_PLANTS = "com.example.android.mygarden.action.water_plants";
-    // TODO (3): Create a new action ACTION_UPDATE_PLANT_WIDGETS to handle updating widget UI and
+    //
+    // (3): Create a new action ACTION_UPDATE_PLANT_WIDGETS to handle updating widget UI and
+    public static final String ACTION_UPDATE_PLANT_WIDGETS = "com.example.android.mygarden.action.update_plants_widget";
     // implement handleActionUpdatePlantWidgets to query the plant closest to dying and call
     // updatePlantWidgets to refresh widgets
 
@@ -57,6 +61,11 @@ public class PlantWateringService extends IntentService {
         context.startService(intent);
     }
 
+    public static void startActionupdatePlantWidget(Context context) {
+        Intent intent = new Intent(context, PlantWateringService.class);
+        intent.setAction(ACTION_UPDATE_PLANT_WIDGETS);
+        context.startService(intent);
+    }
     /**
      * @param intent
      */
@@ -66,7 +75,35 @@ public class PlantWateringService extends IntentService {
             final String action = intent.getAction();
             if (ACTION_WATER_PLANTS.equals(action)) {
                 handleActionWaterPlants();
+            }else if (ACTION_UPDATE_PLANT_WIDGETS.equals(action)){
+                handleActionUpdatePlantsWidget();
             }
+        }
+    }
+
+    private void handleActionUpdatePlantsWidget() {
+        Uri PLANTS_URI = BASE_CONTENT_URI.buildUpon().appendPath(PATH_PLANTS).build();
+        Cursor cursor = getContentResolver().query(PLANTS_URI ,null,null,null,
+                PlantContract.PlantEntry.COLUMN_LAST_WATERED_TIME);
+
+        int imageRes = R.drawable.grass;
+        if (cursor != null && cursor.getCount()>0){
+            cursor.moveToFirst();
+            int createAtIndex = cursor.getColumnIndex(PlantContract.PlantEntry.COLUMN_CREATION_TIME);
+            int waterTimeindex = cursor.getColumnIndex(PlantContract.PlantEntry.COLUMN_LAST_WATERED_TIME);
+            int plantTypeIndex = cursor.getColumnIndex(PlantContract.PlantEntry.COLUMN_PLANT_TYPE);
+
+            long timeNow = System.currentTimeMillis();
+            long craeteAt = cursor.getLong(createAtIndex);
+            long waterAt = cursor.getLong(waterTimeindex);
+            int plantType = cursor.getInt(plantTypeIndex);
+
+            imageRes = PlantUtils.getPlantImageRes(this, timeNow - craeteAt , timeNow - waterAt,
+                    plantType);
+            AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(this);
+            int[] appWidgetIds = appWidgetManager.getAppWidgetIds(new ComponentName(this,PlantWidgetProvider.class));
+            PlantWidgetProvider.updatePlantWidgets(this , appWidgetManager , imageRes ,appWidgetIds);
+
         }
     }
 
